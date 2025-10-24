@@ -1,7 +1,7 @@
 name: Build and deploy Python app to Azure Web App
 
 env:
-  AZURE_WEBAPP_NAME: your-app-name  # Replace with your Azure Web App name
+  AZURE_WEBAPP_NAME: mwangaza  # Replace with your Azure Web App name
   PYTHON_VERSION: '3.8'
 
 on:
