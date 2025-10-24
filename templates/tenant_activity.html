@@ -1,0 +1,47 @@
+{% extends 'tenant_base.html' %}
+
+{% block title %}Tenant Activity | Mwangaza{% endblock %}
+
+{% block content %}
+<main class="flex-1 p-8">
+  <div class="max-w-5xl mx-auto bg-white rounded-xl shadow p-6">
+    <h1 class="text-2xl font-semibold text-mwangaza mb-4">All Activity</h1>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% if activities and activities|length > 0 %}
+            {% for act in activities %}
+              <tr>
+                <td class="px-6 py-4 text-gray-700">{{ act['created_at'] }}</td>
+                <td class="px-6 py-4 text-gray-700">{{ act['activity_type'] | capitalize }}{% if act['description'] %} - {{ act['description'] }}{% endif %}</td>
+                <td class="px-6 py-4 text-gray-700">{% if act['amount'] %}KES {{ act['amount'] }}{% else %}—{% endif %}</td>
+                {% set cls = 'gray-600' %}
+                {% if act['status'] == 'confirmed' %}{% set cls = 'green-600' %}{% elif act['status'] == 'pending' %}{% set cls = 'yellow-600' %}{% endif %}
+                <td class="px-6 py-4 text-{{ cls }} font-semibold">{{ act['status'] | capitalize }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td class="px-6 py-4 text-gray-700">—</td>
+              <td class="px-6 py-4 text-gray-700">No activity found</td>
+              <td class="px-6 py-4 text-gray-700">—</td>
+              <td class="px-6 py-4 text-gray-700">—</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4">
+      <a href="{{ url_for('tenant') }}" class="text-mwangaza hover:underline">← Back to dashboard</a>
+    </div>
+  </div>
+</main>
+{% endblock %}

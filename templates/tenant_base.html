@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Tenant Dashboard | Mwangaza RentLedger{% endblock %}</title>
+
+  <!-- TailwindCSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/23021fc8d3.js" crossorigin="anonymous"></script>
+
+  <!-- Tailwind Theme Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            mwangaza: {
+              light: '#E5EDFF',
+              DEFAULT: '#1E3A8A',  /* Deep Indigo-Blue */
+              dark: '#172554'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-100 h-screen flex overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-mwangaza-dark text-white flex flex-col h-full">
+    <!-- Brand -->
+    <div class="text-3xl font-bold px-6 py-6 tracking-wide bg-mwangaza shadow-lg">
+      Mwangaza
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto" id="tenant-nav">
+      <a data-nav="dashboard" href="{{ url_for('tenant') }}"
+         class="nav-link flex items-center py-2 px-3 rounded-lg hover:bg-mwangaza transition">
+        <i class="fa-solid fa-chart-line mr-3"></i>
+        <span>Dashboard</span>
+      </a>
+      <a data-nav="payments" href="{{ url_for('tenantpayments') }}"
+         class="nav-link flex items-center py-2 px-3 rounded-lg hover:bg-mwangaza transition">
+        <i class="fa-solid fa-credit-card mr-3"></i>
+        <span>Make Payment</span>
+      </a>
+      <a data-nav="tax" href="{{ url_for('taxcompliance') }}"
+         class="nav-link flex items-center py-2 px-3 rounded-lg hover:bg-mwangaza transition">
+        <i class="fa-solid fa-building-columns mr-3"></i>
+        <span>Tax Compliance</span>
+      </a>
+      <a data-nav="receipts" href="{{ url_for('tenantreceipt') }}"
+         class="nav-link flex items-center py-2 px-3 rounded-lg hover:bg-mwangaza transition">
+        <i class="fa-solid fa-receipt mr-3"></i>
+        <span>Receipts</span>
+      </a>
+      <a data-nav="settings" href="{{ url_for('tenantsettings') }}"
+         class="nav-link flex items-center py-2 px-3 rounded-lg hover:bg-mwangaza transition">
+        <i class="fa-solid fa-gear mr-3"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-mwangaza-light text-sm text-gray-300">
+      <a href="{{ url_for('auth.logout') }}" class="flex items-center space-x-2 hover:text-white transition">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Scrollable Area -->
+  <main class="flex-1 bg-gray-50 overflow-y-auto h-full min-h-0 p-8">
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  {% block scripts %}
+  <script>
+    (function() {
+      const ACTIVE_CLASS = 'bg-mwangaza text-white font-semibold';
+      const STORAGE_KEY = 'mwangaza-active-nav';
+      const nav = document.getElementById('tenant-nav');
+      if (!nav) return;
+
+      const links = Array.from(nav.querySelectorAll('.nav-link'));
+
+      function applyActiveByKey(key) {
+        links.forEach(a => {
+          if (a.dataset.nav === key) {
+            a.classList.add(...ACTIVE_CLASS.split(' '));
+            a.setAttribute('aria-current', 'page');
+          } else {
+            a.classList.remove(...ACTIVE_CLASS.split(' '));
+            a.removeAttribute('aria-current');
+          }
+        });
+      }
+
+      function hrefMatchesPath(a) {
+        try {
+          const aPath = new URL(a.href, window.location.origin).pathname.replace(/\/+$/, '');
+          const curPath = window.location.pathname.replace(/\/+$/, '');
+          return aPath === curPath;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      // Load stored or detected active link
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        applyActiveByKey(stored);
+      } else {
+        const matched = links.find(hrefMatchesPath);
+        if (matched) {
+          applyActiveByKey(matched.dataset.nav);
+        }
+      }
+
+      // Persist active link on click
+      links.forEach(a => {
+        a.addEventListener('click', function() {
+          const key = this.dataset.nav || this.getAttribute('href');
+          try { localStorage.setItem(STORAGE_KEY, key); } catch (e) {}
+          applyActiveByKey(this.dataset.nav);
+        });
+      });
+    })();
+  </script>
+  {% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Landlord | Mwangaza RentLedger{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            mwangaza: {
+              DEFAULT: '#1e3a8a',  /* dark blue */
+              light: '#3b82f6',
+              dark: '#172554'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 flex h-screen font-sans text-gray-800">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-mwangaza text-white flex flex-col shadow-lg">
+    <div class="text-2xl font-bold px-6 py-4 border-b border-mwangaza-light tracking-wide">
+      Mwangaza<span class="text-mwangaza-light">Ledger</span>
+    </div>
+
+    <nav class="flex-1 px-4 py-4 space-y-2 text-sm font-medium">
+      <a href="{{ url_for('landlord') }}" class="block py-2 px-3 rounded-lg {% if request.endpoint == 'landlord' %}bg-mwangaza-dark{% else %}hover:bg-mwangaza-dark{% endif %}">
+        🏢 Dashboard
+      </a>
+      <a href="{{ url_for('alltenants') }}" class="block py-2 px-3 rounded-lg {% if request.endpoint == 'alltenants' %}bg-mwangaza-dark{% else %}hover:bg-mwangaza-dark{% endif %}">
+        👥 Tenants
+      </a>
+      <a href="{{ url_for('landlord_receipts') }}" class="block py-2 px-3 rounded-lg {% if request.endpoint == 'receipts' %}bg-mwangaza-dark{% else %}hover:bg-mwangaza-dark{% endif %}">
+        📄 Receipts
+      </a>
+      <a href="{{ url_for('landlord.settings') }}" class="block py-2 px-3 rounded-lg {% if request.endpoint == 'settings' %}bg-mwangaza-dark{% else %}hover:bg-mwangaza-dark{% endif %}">
+        ⚙️ Settings
+      </a>
+      <a href="{{ url_for('kra_tax.withdraw') }}" class="block py-2 px-3 rounded-lg {% if request.endpoint == 'kra_tax.withdraw' %}bg-mwangaza-dark{% else %}hover:bg-mwangaza-dark{% endif %}">
+        💸 Withdraw
+      </a>
+    </nav>
+
+    <div class="px-6 py-4 border-t border-mwangaza-light text-sm text-gray-200">
+      Logged in as <br>
+      <span class="font-semibold">{{ session.get('full_name', 'Landlord') }}</span>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-gray-50 via-white to-gray-100">
+
+    <header class="flex items-center justify-between mb-8">
+      <h1 class="text-3xl font-bold text-mwangaza-dark">{% block page_title %}Dashboard{% endblock %}</h1>
+      <a href="{{ url_for('auth.logout') }}" 
+         class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+        Log Out
+      </a>
+    </header>
+
+    <!-- Main Page Content -->
+    {% block content %}
+    {% endblock %}
+
+    <footer class="text-center text-gray-400 text-xs mt-12">
+      © 2025 <span class="font-semibold text-mwangaza">Mwangaza RentLedger</span> — Secure Bitcoin Rent + Tax Compliance
+    </footer>
+
+  </main>
+</body>
+</html>

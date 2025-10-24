@@ -1,0 +1,138 @@
+{% extends 'tenant_base.html' %}
+
+{% block title %}Tenant Dashboard | Mwangaza{% endblock %}
+
+{% block content %}
+<main class="flex-1 p-8 overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-tl-3xl shadow-inner min-h-screen">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-10">
+    <h1 class="text-3xl font-bold text-mwangaza-dark">Tenant Dashboard</h1>
+    <div class="flex items-center space-x-4">
+        <div class="text-right">
+          <p class="font-medium text-gray-800">{{ session.get('full_name') or session.get('username') or 'Tenant' }}</p>
+          <p class="text-sm text-gray-500">{{ session.get('email') or '' }}</p>
+        </div>
+        {% set _uname = session.get('username') or '' %}
+        <div class="w-10 h-10 bg-mwangaza-light text-mwangaza-dark flex items-center justify-center rounded-full font-bold shadow">
+          {{ (_uname[:1] | upper) if _uname else 'G' }}
+        </div>
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+
+    <!-- Rent Due -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-gray-500 text-sm uppercase tracking-wide">Current Rent Due</h2>
+          <p class="text-3xl font-bold text-mwangaza mt-2">KES {{ (tenancy['monthly_rent']|currency) if tenancy and tenancy['monthly_rent'] is not none else '—' }}</p>
+          <p class="text-sm text-gray-500 mt-1">Due: {{ tenancy['end_date']|date_short if tenancy and tenancy['end_date'] else 'Next billing cycle' }}</p>
+        </div>
+        <i class="fa-solid fa-home text-mwangaza text-3xl"></i>
+      </div>
+    </div>
+
+    <!-- Last Payment -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-gray-500 text-sm uppercase tracking-wide">Last Payment</h2>
+          <p class="text-2xl font-bold text-green-600 mt-2">KES {{ (last_payment['amount']|currency) if last_payment and last_payment['amount'] is not none else '—' }}</p>
+          <p class="text-sm text-gray-500 mt-1">Received: {{ last_payment['created_at']|date_short if last_payment and last_payment['created_at'] else '—' }}</p>
+        </div>
+        <i class="fa-solid fa-credit-card text-green-600 text-3xl"></i>
+      </div>
+    </div>
+
+    <!-- KRA Status -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-gray-500 text-sm uppercase tracking-wide">KRA Status</h2>
+          <p class="text-2xl font-bold text-blue-600 mt-2 flex items-center">
+            {{ kra_status }} {% if kra_status == 'Filed' %}<i class="fa-solid fa-circle-check ml-2 text-blue-500"></i>{% endif %}
+          </p>
+          <p class="text-sm text-gray-500 mt-1">Next Filing: Dec 2025</p>
+        </div>
+        <i class="fa-solid fa-building-columns text-blue-600 text-3xl"></i>
+      </div>
+    </div>
+
+    <!-- MPESA Balance -->
+    <div class="bg-gradient-to-br from-green-600 to-emerald-500 p-6 rounded-xl shadow-md hover:shadow-lg transition">
+      <div class="flex items-center justify-between text-white">
+        <div>
+          <h2 class="text-green-100 text-sm uppercase tracking-wide">MPESA Balance</h2>
+          <p class="text-3xl font-bold mt-2 flex items-center">KES {{ mpesa_balance|currency }}</p>
+          <p class="text-sm text-green-100 mt-1">Updated: Just now</p>
+        </div>
+        <i class="fa-solid fa-mobile-screen text-white text-3xl"></i>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="mt-12 flex flex-wrap items-center gap-4">
+    <a href="{{ url_for('tenantpayments') }}" 
+       class="bg-mwangaza text-white px-6 py-3 rounded-lg font-medium hover:bg-mwangaza-dark transition flex items-center">
+      <i class="fa-solid fa-paper-plane mr-2"></i> Make a Payment
+    </a>
+
+    <a href="{{ url_for('tenantreceipt') }}" 
+       class="text-mwangaza font-medium hover:underline flex items-center">
+      <i class="fa-solid fa-receipt mr-2"></i> View Receipts
+    </a>
+
+    <a href="{{ url_for('taxcompliance') }}" 
+       class="text-blue-600 font-medium hover:underline flex items-center">
+      <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Tax Compliance
+    </a>
+  </div>
+
+  <!-- Recent Activity Table -->
+  <section class="mt-16 bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="text-xl font-semibold text-mwangaza-dark">Recent Activity</h2>
+      <a href="{{ url_for('tenantactivity') }}" class="text-sm text-mwangaza hover:underline">View All</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+            <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% if recent_activities and recent_activities|length > 0 %}
+            {% for act in recent_activities %}
+              <tr>
+                <td class="px-6 py-4 text-gray-700">{{ act['created_at']|date_short }}</td>
+                <td class="px-6 py-4 text-gray-700">{{ act['activity_type'] | capitalize }}{% if act['description'] %} - {{ act['description'] }}{% endif %}</td>
+                <td class="px-6 py-4 text-gray-700">{% if act['amount'] is not none %}KES {{ act['amount']|currency }}{% else %}—{% endif %}</td>
+                {% set cls = 'gray-600' %}
+                {% if act['status'] == 'confirmed' %}{% set cls = 'green-600' %}{% elif act['status'] == 'pending' %}{% set cls = 'yellow-600' %}{% endif %}
+                <td class="px-6 py-4 text-{{ cls }} font-semibold">{{ act['status'] | capitalize }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td class="px-6 py-4 text-gray-700">—</td>
+              <td class="px-6 py-4 text-gray-700">No recent activity</td>
+              <td class="px-6 py-4 text-gray-700">—</td>
+              <td class="px-6 py-4 text-gray-700">—</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+{% endblock %}

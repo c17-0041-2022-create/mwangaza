@@ -1,0 +1,38 @@
+{% extends base_template|default('tenant_base.html') %}
+
+{% block title %}Profile | Mwangaza{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto my-10 bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
+  <h1 class="text-2xl font-bold text-mwangaza mb-4">Account Profile</h1>
+
+  <form method="post" action="{{ url_for('auth.update_profile') }}" class="space-y-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Full name</label>
+        <input name="full_name" type="text" value="{{ user['full_name'] if user else session.get('full_name','') }}" class="w-full rounded-md border-gray-300 p-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+        <input name="email" type="email" value="{{ user['email'] if user else session.get('email','') }}" class="w-full rounded-md border-gray-300 p-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
+        <input name="phone" type="text" value="{{ user['phone'] if user else '' }}" class="w-full rounded-md border-gray-300 p-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">KRA PIN</label>
+        <input name="kra_pin" type="text" value="{{ user['kra_pin'] if user else '' }}" class="w-full rounded-md border-gray-300 p-2">
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="bg-mwangaza text-white px-4 py-2 rounded-lg">Save Profile</button>
+      <a href="{{ url_for('general.index') }}" class="text-sm text-gray-600">Back to home</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

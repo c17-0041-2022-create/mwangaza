@@ -1,0 +1,143 @@
+{% extends "tenant_base.html" %}
+
+{% block title %}Rent Payment Receipt | Mwangaza RentLedger{% endblock %}
+
+{% block extra_head %}
+  <style>
+    @media print {
+      body { font-size: 10pt; color: #000; background: #fff; }
+      .no-print { display: none !important; }
+      .receipt-container { border: none !important; box-shadow: none !important; }
+      a[href]:after { content: ""; } /* Remove link print text */
+    }
+
+    .truncate-mono {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      font-family: monospace;
+    }
+
+    .receipt-header-gradient {
+      background: linear-gradient(90deg, #047857, #059669, #10b981);
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto my-10 bg-white shadow-2xl receipt-container border border-gray-200 rounded-2xl overflow-hidden">
+  
+  <!-- HEADER -->
+  <header class="py-8 px-6 sm:px-10 receipt-header-gradient text-white">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+      <div>
+        <h1 class="text-3xl font-bold">OFFICIAL RENT PAYMENT RECEIPT</h1>
+        <p class="mt-1 text-blue-500">Mwangaza Rent Ledger</p>
+      </div>
+      <img src="{{ url_for('static', filename='assets/img/mwangaza-logo.png') }}"
+           alt="Mwangaza Logo"
+           class="h-12 w-auto self-end bg-white p-2 rounded-lg shadow-md" />
+    </div>
+
+    <div class="mt-4 text-sm sm:flex sm:space-x-8">
+      <p>Receipt No: <span class="font-semibold">RL-{{ payment['id'] if payment else '000' }}</span></p>
+      <p>Date Issued: <span class="font-semibold">{{ payment['created_at'] if payment else '' }}</span></p>
+    </div>
+  </header>
+
+  <!-- LANDLORD / TENANT -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-8 border-b border-gray-200 text-sm">
+    <div>
+      <h2 class="font-bold text-mwangaza-dark mb-2 border-b pb-1">LANDLORD &amp; PROPERTY</h2>
+      <p><span class="font-medium">Landlord:</span> {{ landlord['full_name'] if landlord else '—' }}</p>
+      <p><span class="font-medium">KRA PIN:</span> {{ landlord['kra_pin'] if landlord else '—' }}</p>
+  <p><span class="font-medium">Property:</span> {{ tenancy['property_name'] if tenancy and tenancy['property_name'] else '—' }}</p>
+    </div>
+    <div>
+      <h2 class="font-bold text-mwangaza-dark mb-2 border-b pb-1">TENANT &amp; PERIOD</h2>
+      <p><span class="font-medium">Tenant:</span> {{ session.get('full_name') or session.get('username') }}</p>
+      <p><span class="font-medium">Tenant ID:</span> {{ session.get('user_id') }}</p>
+      <p><span class="font-medium">Period:</span> 
+  <span class="bg-yellow-100 px-2 rounded-full font-semibold text-yellow-800">{{ payment['created_at'][:7] if payment and payment['created_at'] else '' }}</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- FINANCIAL BREAKDOWN -->
+  <section class="p-8">
+    <h2 class="font-bold text-mwangaza-dark text-lg sm:text-xl mb-4">FINANCIAL BREAKDOWN</h2>
+    <div class="border border-gray-300 rounded-lg overflow-hidden text-sm">
+      <div class="grid grid-cols-3 bg-gray-50 font-semibold p-3 border-b">
+        <div class="col-span-2">Description</div>
+        <div class="text-right">Amount (KES)</div>
+      </div>
+      <div class="grid grid-cols-3 p-3">
+        <div class="col-span-2">Monthly Rent Due</div>
+        <div class="text-right">{{ payment['amount'] if payment else '—' }}</div>
+      </div>
+      <div class="grid grid-cols-3 p-3 border-t border-dashed">
+        <div class="col-span-2 font-medium">Late Fees / Arrears</div>
+        <div class="text-right text-red-600 font-medium">0.00</div>
+      </div>
+      <div class="grid grid-cols-3 p-4 bg-green-50 font-bold text-lg border-t border-green-200">
+        <div class="col-span-2">TOTAL AMOUNT PAID</div>
+        <div class="text-right text-green-700">{{ payment['amount'] if payment else '—' }} KES</div>
+      </div>
+    </div>
+
+    <!-- PAYMENT DETAILS & COMPLIANCE -->
+    <div class="mt-8 text-sm grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <!-- PAYMENT -->
+      <div>
+        <h3 class="font-bold text-mwangaza-dark mb-2 border-b pb-1">PAYMENT DETAILS</h3>
+        <p><span class="font-medium">Method:</span> 
+          <span class="font-semibold text-green-600 flex items-center">{{ payment['description'] if payment else '—' }}</span>
+        </p>
+        <p><span class="font-medium">Transaction ID:</span> 
+          <span class="truncate-mono">{{ payment['id'] if payment else '' }}</span></p>
+        <p><span class="font-medium">BTC Equivalent:</span> 0 Sats</p>
+        <p><span class="font-medium">Exchange Rate:</span> 1 BTC = KES 8,200,000.00</p>
+      </div>
+
+      <!-- COMPLIANCE -->
+      <div>
+        <h3 class="font-bold text-mwangaza-dark mb-2 border-b pb-1">COMPLIANCE &amp; AUDIT</h3>
+        <p><span class="font-medium">KRA eRITS Status:</span> 
+          <span class="font-bold text-green-600">Filed</span></p>
+        <p><span class="font-medium">MRI Tax (Est.):</span> KES 3,500.00</p>
+        <p><span class="font-medium">Receipt Hash (SHA-256):</span>
+          <span class="font-mono text-xs truncate-mono">
+            f3a92d98b7c4a1f9d51b2c86a72eaf65e1b9d3d07e45a6bc12a4ffb71cc23310
+          </span>
+        </p>
+        <p class="mt-2">
+          <a href="https://blockstream.info/tx/0000000000000000000demo"
+             target="_blank"
+             class="text-xs text-blue-600 hover:underline">
+            View Blockchain Anchor Record
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- STATUS -->
+    <div class="mt-10 text-center p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shadow">
+      <p class="text-xl sm:text-2xl font-extrabold text-white tracking-wide">STATUS: PAID IN FULL</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="p-6 border-t border-gray-200 text-center text-xs text-gray-600 bg-gray-50 no-print">
+    <p class="mb-2">This receipt serves as a valid proof of payment for the rental period specified.</p>
+    <p>Powered by <span class="font-semibold text-mwangaza-dark">Mwangaza RentLedger</span>. For support, contact your property manager.</p>
+    <div class="mt-4">
+      <button onclick="window.print()"
+              class="inline-flex items-center gap-2 bg-mwangaza hover:bg-mwangaza-dark text-white font-semibold py-2 px-5 rounded-lg transition">
+        <i class="fa-solid fa-print"></i> Download / Print Receipt
+      </button>
+    </div>
+  </footer>
+
+</div>
+{% endblock %}

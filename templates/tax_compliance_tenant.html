@@ -1,0 +1,284 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { FileText, DollarSign, Users, AlertTriangle, CheckCircle, XCircle, Download, Loader2, Maximize2 } from 'lucide-react';
+
+// --- FIREBASE BOILERPLATE (MANDATORY SETUP) ---
+// Note: This component relies on the same mock data structure as the Tenant Manager.
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Mock UUID for client-side IDs
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
+// --- TAX CONSTANTS (MOCK) ---
+const RENTAL_WHT_RATE = 0.10; // 10% Withholding Tax Rate (Kenya corporate/non-resident rental income - simplified)
+const MOCK_MONTHLY_RENT = 55000; // Mock rent amount used for WHT calculation
+
+// Helper function to calculate mock tax
+const calculateMockTax = (isWhtApplicable) => {
+    return isWhtApplicable ? (MOCK_MONTHLY_RENT * RENTAL_WHT_RATE) : 0;
+};
+
+// Initial Tenants Data (Used to seed the hook)
+const initialTenants = [
+    { 
+        id: generateId(), 
+        name: 'Aisha Mohammed', 
+        unit: 'Apt 3B', 
+        kra_pin: 'A123456789W',
+        wht_applicable: true,
+        wht_amount: calculateMockTax(true),
+        total_rent_paid: 55000,
+    },
+    { 
+        id: generateId(), 
+        name: 'Benson Kimani', 
+        unit: 'House 1A', 
+        kra_pin: 'B987654321Q',
+        wht_applicable: false,
+        wht_amount: calculateMockTax(false),
+        total_rent_paid: 55000,
+    },
+    { 
+        id: generateId(), 
+        name: 'Cynthia Okello', 
+        unit: 'Studio 5', 
+        kra_pin: 'C543210987R',
+        wht_applicable: true,
+        wht_amount: calculateMockTax(true),
+        total_rent_paid: 55000,
+    },
+    { 
+        id: generateId(), 
+        name: 'David Omondi', 
+        unit: 'Suite 10', 
+        kra_pin: 'D999888777X',
+        wht_applicable: false,
+        wht_amount: calculateMockTax(false),
+        total_rent_paid: 55000,
+    },
+];
+
+/**
+ * Mock Hook to simulate fetching tenant data (including tax fields) from Firestore.
+ */
+const useFirestoreTenants = () => {
+    const [tenants, setTenants] = useState(initialTenants);
+    const [loading, setLoading] = useState(true);
+    const [userId, setUserId] = useState(null);
+
+    useEffect(() => {
+        // Mock Firebase Auth setup
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const signIn = async () => {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            signIn().catch(err => console.error("Firebase Auth Error:", err));
+            onAuthStateChanged(auth, (user) => {
+                setUserId(user ? user.uid : 'mock-user-tax-auditor');
+                setLoading(false);
+            });
+        } catch (error) {
+            console.error("Firebase initialization failed. Using mock data.", error);
+            setUserId('mock-user-tax-auditor');
+            setLoading(false);
+        }
+    }, []);
+
+    // Simulate sorting by unit
+    const sortedTenants = useMemo(() => {
+        return [...tenants].sort((a, b) => a.unit.localeCompare(b.unit));
+    }, [tenants]);
+
+    return { tenants: sortedTenants, loading, userId };
+};
+
+// --- COMPONENTS ---
+
+const StatisticCard = ({ title, value, icon: Icon, colorClass }) => (
+    <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-indigo-400">
+        <div className="flex items-center">
+            <Icon className={`w-8 h-8 mr-4 ${colorClass}`} />
+            <div>
+                <p className="text-sm font-medium text-gray-500">{title}</p>
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
+            </div>
+        </div>
+    </div>
+);
+
+const TaxComplianceTable = ({ tenants }) => (
+    <div className="bg-white p-6 rounded-xl shadow-2xl overflow-x-auto">
+        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+            <FileText className="w-5 h-5 mr-2 text-indigo-600" />
+            Tenant Withholding Tax Breakdown
+        </h2>
+        <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+                <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KRA PIN</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">WHT Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">WHT Amount (KES)</th>
+                </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+                {tenants.map((tenant) => (
+                    <tr key={tenant.id} className="hover:bg-indigo-50/50 transition">
+                        <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap">{tenant.unit}</td>
+                        <td className="px-6 py-4 text-gray-700">{tenant.name}</td>
+                        <td className="px-6 py-4 font-mono text-sm text-gray-600">{tenant.kra_pin}</td>
+                        <td className="px-6 py-4 text-center">
+                            {tenant.wht_applicable ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Applied
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Exempt
+                                </span>
+                            )}
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-indigo-600">
+                            {tenant.wht_amount.toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+);
+
+// --- MAIN APPLICATION COMPONENT ---
+
+const App = () => {
+    const { tenants, loading, userId } = useFirestoreTenants();
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    // Calculate Summary Statistics
+    const { totalWHT, totalRent, whtApplicableCount } = useMemo(() => {
+        if (loading) return { totalWHT: 0, totalRent: 0, whtApplicableCount: 0 };
+
+        const totalWHT = tenants.reduce((sum, t) => sum + t.wht_amount, 0);
+        const totalRent = tenants.reduce((sum, t) => sum + t.total_rent_paid, 0);
+        const whtApplicableCount = tenants.filter(t => t.wht_applicable).length;
+
+        return { totalWHT, totalRent, whtApplicableCount };
+    }, [tenants, loading]);
+
+    const formatCurrency = (amount) => {
+        return `KES ${amount.toLocaleString('en-KE', { minimumFractionDigits: 0 })}`;
+    };
+
+    const handleReportGeneration = useCallback(async () => {
+        setIsGenerating(true);
+        // Simulate complex report generation process
+        await new Promise(resolve => setTimeout(resolve, 3000)); 
+
+        // Mock CSV/Report content for demonstration
+        const reportContent = tenants.map(t => 
+            `${t.kra_pin},${t.name},${t.unit},${t.wht_applicable},${t.wht_amount}`
+        ).join('\n');
+
+        console.log("Mock KRA Report Content Generated (CSV format):\n", "KRA_PIN,Name,Unit,WHT_Applied,WHT_Amount\n" + reportContent);
+
+        alert("Success! KRA WHT report data generated successfully. Check console for mock data.");
+        setIsGenerating(false);
+    }, [tenants]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center font-inter">
+                <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+                <span className="ml-3 text-lg text-gray-600">Loading Compliance Data...</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-inter">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 py-4 border-b-2 border-indigo-200">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-800 flex items-center">
+                        <Maximize2 className="w-7 h-7 mr-3 text-indigo-600" />
+                        KRA Tax Compliance Dashboard
+                    </h1>
+                    <button
+                        onClick={handleReportGeneration}
+                        className="mt-4 sm:mt-0 flex items-center space-x-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-700 transition transform hover:scale-[1.02] disabled:opacity-50"
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <Download size={20} />
+                        )}
+                        <span>{isGenerating ? 'Generating Report...' : 'Generate KRA WHT Report'}</span>
+                    </button>
+                </header>
+
+                {/* User ID Display */}
+                <div className="mb-6 p-3 bg-white rounded-xl shadow-md text-xs text-gray-500 font-mono overflow-auto">
+                    **App ID:** {appId} | **Auditor ID:** {userId || 'N/A'}
+                </div>
+
+                {/* Statistics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <StatisticCard 
+                        title="Total WHT Deducted (Mock)" 
+                        value={formatCurrency(totalWHT)}
+                        icon={DollarSign}
+                        colorClass="text-red-500"
+                    />
+                    <StatisticCard 
+                        title="Total Rent Paid (Mock)" 
+                        value={formatCurrency(totalRent)}
+                        icon={DollarSign}
+                        colorClass="text-indigo-500"
+                    />
+                    <StatisticCard 
+                        title="Tenants with WHT Applied" 
+                        value={`${whtApplicableCount} / ${tenants.length}`}
+                        icon={Users}
+                        colorClass="text-yellow-500"
+                    />
+                </div>
+
+                {/* Compliance Alert */}
+                <div className="p-4 mb-8 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg">
+                    <div className="flex items-start">
+                        <FileText className="w-5 h-5 text-indigo-600 mt-0.5 mr-3" />
+                        <p className="text-sm text-indigo-800">
+                            This report summarizes **Withholding Tax (WHT)** applied to rental income as per KRA guidelines. The data is currently mocked based on a 10% rate on a fixed rent of KES {MOCK_MONTHLY_RENT.toLocaleString()}. Use the 'Generate Report' button for KRA submission data.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Detailed Table */}
+                <TaxComplianceTable tenants={tenants} />
+
+                <footer className="mt-8 text-center text-xs text-gray-500">
+                    <p>Compliance data generated on: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                </footer>
+            </div>
+        </div>
+    );
+};
+
+export default App;
+
+                    

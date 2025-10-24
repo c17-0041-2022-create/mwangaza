@@ -1,0 +1,97 @@
+{% extends "tenant_base.html" %}
+
+{% block title %}Tenant Settings | Mwangaza{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto my-10 bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-8 border border-gray-200">
+  <h1 class="text-2xl sm:text-3xl font-bold text-mwangaza mb-6">Tenant Settings — Grace Wanjiku</h1>
+
+  <form class="space-y-6" method="post" action="{{ url_for('auth.update_profile') }}">
+    <!-- Mock Error Message -->
+    <div class="bg-green-50 border-l-4 border-green-500 text-green-800 p-4 rounded-md">
+      <p class="font-semibold">Demo Mode: Editing disabled. Fields are shown with sample data.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <!-- LEFT -->
+      <div class="space-y-4">
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Name</label>
+     <input name="full_name" type="text" value="{{ user['full_name'] if user else session.get('full_name','') }}"
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-white text-gray-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Primary Domain</label>
+          <input type="text" value="grace.mwangaza.rent" disabled
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Contact Email</label>
+     <input name="email" type="email" value="{{ user['email'] if user else session.get('email','') }}"
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-white text-gray-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+     <input name="phone" type="text" value="{{ user['phone'] if user else '' }}"
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-white text-gray-800">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">KRA PIN</label>
+     <input name="kra_pin" type="text" value="{{ user['kra_pin'] if user else '' }}"
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-white text-gray-800">
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="space-y-4">
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-2">Logo</label>
+          <div class="mb-2">
+            <img src="{{ url_for('static', filename='img/demo_tenant_logo.png') }}"
+                 alt="Mwangaza Tenant Logo" class="rounded-lg shadow-sm border w-auto max-h-24">
+          </div>
+     <input type="file" name="logo" 
+       class="w-full text-gray-700 bg-white border-gray-200 rounded">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-2">Features</label>
+          <div class="space-y-2">
+            <label class="flex items-center space-x-2 text-gray-600">
+              <input name="enable_sms" type="checkbox"
+                     class="rounded text-mwangaza focus:ring-mwangaza">
+              <span>Enable SMS Notifications</span>
+            </label>
+            <label class="flex items-center space-x-2 text-gray-600">
+              <input name="enable_reminders" type="checkbox"
+                     class="rounded text-mwangaza focus:ring-mwangaza">
+              <span>Enable Auto Rent Reminders</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Billing Plan</label>
+          <input type="text" value="Premium (KES 1,200/month)" disabled
+                 class="w-full rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-600">
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-3 mt-6">
+      <button type="submit"
+              class="bg-mwangaza text-white font-semibold py-2 px-5 rounded-lg">
+        Save Changes
+      </button>
+      <a href="{{ url_for('tenant') }}"
+         class="border border-gray-300 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg py-2 px-5 transition">
+         Back to Dashboard
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

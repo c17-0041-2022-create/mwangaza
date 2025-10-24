@@ -1,0 +1,206 @@
+{% extends "landlord_base.html" %}
+
+{% block title %}Mwangaza RentLedger – Tenants Overview{% endblock %}
+
+{% block content %}
+<section id="tenants-screen" class="min-h-screen bg-gray-50 p-6">
+  <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Tenants Overview</h1>
+        <p class="text-gray-600 text-sm mt-1">View and manage all tenants renting your properties</p>
+      </div>
+      <div class="mt-4 md:mt-0 flex items-center gap-3">
+        <input
+          type="text"
+          id="tenantSearch"
+          placeholder="Search tenant..."
+          class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+        <button
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+        >
+          + Add Tenant
+        </button>
+      </div>
+    </div>
+
+    <!-- Tenant Table -->
+    <div class="overflow-x-auto border rounded-xl shadow-sm">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-100 border-b text-gray-700 uppercase">
+          <tr>
+            <th class="px-4 py-3">Tenant Name</th>
+            <th class="px-4 py-3">Unit / Property</th>
+            <th class="px-4 py-3">Contact</th>
+            <th class="px-4 py-3">Rent Status</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tenantTableBody" class="divide-y">
+          {% if tenants and tenants|length > 0 %}
+            {% for t in tenants %}
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 font-medium text-gray-800">{{ t.full_name or t.email }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ t.property_name or '—' }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ t.phone or t.email }}</td>
+                <td class="px-4 py-3">
+                  {% if t.status == 'active' %}
+                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">Active</span>
+                  {% elif t.status == 'inactive' %}
+                    <span class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Inactive</span>
+                  {% else %}
+                    <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium">{{ t.status or 'Pending' }}</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="#" onclick="openTenantModal('{{ t.full_name|escapejs }}')" class="text-blue-600 hover:underline text-sm">View</a>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td class="px-4 py-3" colspan="5">No tenants found</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex justify-between items-center mt-6 text-sm text-gray-500">
+      <p id="tenantCount">Total Tenants: {{ tenants|length if tenants else 0 }}</p>
+    </div>
+  </div>
+</section>
+
+<!-- TENANT PROFILE MODAL -->
+<div id="tenantModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex justify-center items-center z-50">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 relative">
+    <!-- Close Button -->
+    <button onclick="closeTenantModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+      ✕
+    </button>
+
+    <!-- Header -->
+    <h2 id="tenantModalName" class="text-xl font-bold text-gray-800 mb-2">Tenant Name</h2>
+    <p id="tenantModalUnit" class="text-gray-500 text-sm mb-4">Sunrise Apartments, Apt 2B</p>
+
+    <!-- Tenant Info -->
+    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+      <div>
+        <p class="text-gray-500">Contact:</p>
+        <p id="tenantContact" class="text-gray-800">+254 000 000 000</p>
+      </div>
+      <div>
+        <p class="text-gray-500">Status:</p>
+        <p id="tenantStatus" class="text-green-700 font-medium">Paid</p>
+      </div>
+      <div>
+        <p class="text-gray-500">Next Rent Due:</p>
+        <p id="tenantNextDue" class="text-gray-800">5 Nov 2025</p>
+      </div>
+      <div>
+        <p class="text-gray-500">Last Payment:</p>
+        <p id="tenantLastPayment" class="text-gray-800">5 Oct 2025</p>
+      </div>
+    </div>
+
+    <!-- Payment History -->
+    <h3 class="font-semibold text-gray-700 mt-4 mb-2">Payment History</h3>
+    <div class="border rounded-lg overflow-hidden">
+      <table class="w-full text-sm text-left">
+        <thead class="bg-gray-100 text-gray-600 uppercase">
+          <tr>
+            <th class="px-3 py-2">Month</th>
+            <th class="px-3 py-2">Amount (KES)</th>
+            <th class="px-3 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody id="tenantPaymentHistory">
+          <tr class="border-t">
+            <td class="px-3 py-2">October 2025</td>
+            <td class="px-3 py-2">40,000</td>
+            <td class="px-3 py-2 text-green-600 font-medium">Paid</td>
+          </tr>
+          <tr>
+            <td class="px-3 py-2">September 2025</td>
+            <td class="px-3 py-2">40,000</td>
+            <td class="px-3 py-2 text-green-600 font-medium">Paid</td>
+          </tr>
+          <tr>
+            <td class="px-3 py-2">August 2025</td>
+            <td class="px-3 py-2">40,000</td>
+            <td class="px-3 py-2 text-yellow-600 font-medium">Late</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between mt-6">
+      <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        Message Tenant
+      </button>
+      <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+        Issue Receipt
+      </button>
+      <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+        Send Reminder
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- JS: Search + Modal Logic -->
+<script>
+  const searchInput = document.getElementById('tenantSearch');
+  const tableBody = document.getElementById('tenantTableBody');
+  const tenantRows = tableBody ? tableBody.getElementsByTagName('tr') : [];
+
+  // Search filter
+  if (searchInput) {
+    searchInput.addEventListener('keyup', function() {
+      const filter = searchInput.value.toLowerCase();
+      for (let i = 0; i < tenantRows.length; i++) {
+        const tenantName = tenantRows[i].getElementsByTagName('td')[0];
+        if (tenantName) {
+          const textValue = tenantName.textContent || tenantName.innerText;
+          tenantRows[i].style.display = textValue.toLowerCase().includes(filter) ? '' : 'none';
+        }
+      }
+    });
+  }
+
+  // Modal functions
+  function openTenantModal(name) {
+    const modal = document.getElementById('tenantModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.getElementById('tenantModalName').innerText = name;
+
+    // Demo data logic — replace with backend fetch if needed
+    const tenants = {
+      "John Mwangi": { contact: "+254 712 345 678", status: "Paid", unit: "Sunrise Apartments, Apt 2B" },
+      "Mary Atieno": { contact: "+254 701 987 654", status: "Pending", unit: "Sunrise Apartments, Apt 3A" },
+      "Kelvin Ochieng": { contact: "+254 710 222 111", status: "Overdue", unit: "Sunrise Apartments, Apt 1C" },
+    };
+    const tenant = tenants[name] || { contact: "—", status: "Pending", unit: "—" };
+    document.getElementById('tenantContact').innerText = tenant.contact;
+    document.getElementById('tenantStatus').innerText = tenant.status;
+    document.getElementById('tenantModalUnit').innerText = tenant.unit;
+    document.getElementById('tenantStatus').className =
+      tenant.status === "Paid"
+        ? "text-green-700 font-medium"
+        : tenant.status === "Pending"
+        ? "text-yellow-700 font-medium"
+        : "text-red-700 font-medium";
+  }
+
+  function closeTenantModal() {
+    const modal = document.getElementById('tenantModal');
+    if (modal) modal.classList.add('hidden');
+  }
+</script>
+{% endblock %}

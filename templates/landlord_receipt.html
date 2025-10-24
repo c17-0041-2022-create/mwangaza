@@ -1,0 +1,50 @@
+{% extends 'landlord_base.html' %}
+
+{% block title %}Receipts | Landlord{% endblock %}
+
+{% block page_title %}Receipts{% endblock %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-xl shadow-md">
+  <h2 class="text-lg font-semibold text-mwangaza-dark mb-4">Recent Receipts</h2>
+
+  {% if global_fallback %}
+    <div class="mb-3 text-sm text-yellow-700">Showing recent receipts across all landlords (development fallback)</div>
+  {% endif %}
+
+  {% if payments and payments|length > 0 %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
+          <tr>
+            <th class="py-3 px-4 text-left">#</th>
+            <th class="py-3 px-4 text-left">Tenant</th>
+            <th class="py-3 px-4 text-left">Unit</th>
+            <th class="py-3 px-4 text-left">Amount</th>
+            <th class="py-3 px-4 text-left">Currency</th>
+            <th class="py-3 px-4 text-left">Description</th>
+            <th class="py-3 px-4 text-left">Date</th>
+            <th class="py-3 px-4 text-left">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for p in payments %}
+            <tr>
+              <td class="py-3 px-4">{{ loop.index }}</td>
+              <td class="py-3 px-4 font-medium text-gray-800">{{ p['tenant_name'] if p['tenant_name'] is defined else p['tenant_id'] }}</td>
+              <td class="py-3 px-4">{{ p['property_name'] if p['property_name'] is defined else '-' }}</td>
+              <td class="py-3 px-4">{{ p['amount']|currency }}</td>
+              <td class="py-3 px-4">{{ p.get('currency', 'KES') }}</td>
+              <td class="py-3 px-4">{{ p['description'] or '-' }}</td>
+              <td class="py-3 px-4">{{ p['created_at']|date_short }}</td>
+              <td class="py-3 px-4">{{ p['status'] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-sm text-gray-600">No receipts found yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

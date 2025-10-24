@@ -1,0 +1,81 @@
+{% extends 'landlord_base.html' %}
+
+{% block title %}Landlord Dashboard | Mwangaza RentLedger{% endblock %}
+{% block page_title %}Landlord Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- KPI Cards -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+  <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+    <h2 class="text-gray-500 text-sm uppercase">Total Rent Collected</h2>
+    <p class="text-3xl font-bold text-mwangaza mt-2">KES {{ '%.2f'|format(total_rent_collected if total_rent_collected is defined else 0) }}</p>
+    <p class="text-sm text-gray-500 mt-1">This month</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+    <h2 class="text-gray-500 text-sm uppercase">KES Balance</h2>
+    <p class="text-3xl font-bold text-yellow-500 mt-2">KES {{ '%.2f'|format(kes_balance if kes_balance is defined else 0) }}</p>
+    <p class="text-sm text-gray-500 mt-1">Confirmed balance</p>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+    <h2 class="text-gray-500 text-sm uppercase">KRA Compliance</h2>
+    <p class="text-3xl font-bold text-green-600 mt-2">{{ compliance_pct if compliance_pct is defined else 0 }}% Filed</p>
+    <p class="text-sm text-gray-500 mt-1">Recent filings: {{ compliance_pct if compliance_pct is defined else 0 }}%</p>
+  </div>
+</section>
+
+<!-- Quick Actions -->
+<div class="flex flex-wrap gap-4 mb-10">
+  <button class="bg-mwangaza text-white px-6 py-3 rounded-lg font-medium hover:bg-mwangaza-dark transition">
+    Convert BTC → KES
+  </button>
+  <a href="{{ url_for('kra_tax.withdraw') }}" class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition inline-flex items-center">
+    Withdraw to M-Pesa
+  </a>
+</div>
+
+<!-- Tenant Payment Table -->
+<section class="bg-white p-6 rounded-xl shadow-md">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-lg font-semibold text-mwangaza-dark">Tenant Rent Records</h2>
+    <input type="text" placeholder="Search tenant…" 
+           class="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-mwangaza-light">
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-100 text-gray-600 uppercase text-xs font-semibold">
+        <tr>
+          <th class="py-3 px-4 text-left">Tenant</th>
+          <th class="py-3 px-4 text-left">Unit</th>
+          <th class="py-3 px-4 text-left">Amount (KES)</th>
+          <th class="py-3 px-4 text-left">Paid (BTC)</th>
+          <th class="py-3 px-4 text-left">Date</th>
+          <th class="py-3 px-4 text-left">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% if recent_payments and recent_payments|length > 0 %}
+          {% for p in recent_payments %}
+            <tr>
+              <td class="py-3 px-4 font-medium text-gray-800">{{ p['tenant_name'] or p.get('tenant_id', '-') }}</td>
+              <td class="py-3 px-4">{{ p['property_name'] or '-' }}</td>
+              <td class="py-3 px-4">{{ '%.2f'|format(p['amount'] if p.get('amount') is not none else 0) }}</td>
+              <td class="py-3 px-4">-</td>
+              <td class="py-3 px-4">{{ p['created_at'] }}</td>
+              <td class="py-3 px-4 text-green-600 font-medium">{{ p.get('status', 'confirmed')|capitalize }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td class="py-3 px-4" colspan="6">No recent payments yet.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,299 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { CreditCard, Zap, CheckCircle, Clock, AlertTriangle, Loader2, DollarSign, Home } from 'lucide-react';
+
+// --- MANDATORY FIREBASE BOILERPLATE (Kept for environment context) ---
+// Note: This screen primarily interacts with the simulated API, but Firebase context is kept.
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+// Mock user ID state for context
+const useAuthContext = () => {
+    const [userId, setUserId] = useState(null);
+    useEffect(() => {
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const signIn = async () => {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            signIn().catch(err => console.error("Firebase Auth Error:", err));
+            onAuthStateChanged(auth, (user) => {
+                setUserId(user ? user.uid : crypto.randomUUID());
+            });
+        } catch (error) {
+            console.error("Firebase initialization failed. Using mock data.", error);
+            setUserId('mock-tenant-id');
+        }
+    }, []);
+    return userId;
+};
+
+// --- MOCK API INTERFACE (Simulates calls to backend/routes/payments.py) ---
+
+// Simulates the Flask backend generating a Lightning invoice via LND service.
+const generateLightningInvoice = async (amountKES, unit) => {
+    // Simulate network latency and LND call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    if (amountKES <= 0) {
+        throw new Error("Payment amount must be greater than zero.");
+    }
+
+    // --- Mock Data Calculation ---
+    // Exchange rate simulation: 1 USD = 130 KES, 1 BTC = 65,000 USD
+    // 1 KES ≈ 7.69 SATs (for easy mockup)
+    const satsValue = Math.round(amountKES * 7.69); 
+    const memo = `Rent for ${unit}`;
+
+    // Mock successful bolt11 invoice (base64 of "LN INVOICE FOR KES [amount]..." for QR)
+    const mockInvoiceString = btoa(`LN INVOICE FOR KES ${amountKES} (${satsValue} SATs) - Memo: ${memo}`);
+
+    return {
+        invoice: `lnbc1${mockInvoiceString}`, // Prefix with lnbc1 for realism
+        amount_sats: satsValue,
+        status: 'PENDING',
+        memo: memo,
+    };
+};
+
+// Simulates the backend WebSocket listener checking for payment settlement
+const pollPaymentStatus = async (invoice) => {
+    // Simulate initial PENDING status
+    await new Promise(resolve => setTimeout(resolve, 3000)); 
+
+    // Simulate a successful payment after the first poll
+    // In a real app, this would be a WebSocket / long-polling call to the Flask backend's LND webhook.
+    await new Promise(resolve => setTimeout(resolve, 2000)); 
+    return 'SETTLED';
+};
+
+// --- UTILITY COMPONENTS ---
+
+// Simple inline SVG QR Code Generator (to avoid external libraries in a single-file mandate)
+const QRCode = ({ value, size = 128 }) => {
+    // Note: Generating a real QR code in a single file component is complex.
+    // This provides a visual placeholder that represents a QR code display.
+    return (
+        <svg viewBox="0 0 256 256" width={size} height={size} className="p-2 bg-white rounded-lg shadow-inner">
+            <rect width="256" height="256" fill="#1f2937" />
+            <path fill="#ffffff" d="M32 32h64v64H32z M160 32h64v64h-64z M32 160h64v64H32z M128 128h32v32h-32z M176 176h32v32h-32z M208 64h16v16h-16z M64 208h16v16H64z" />
+            <text x="128" y="128" fontSize="20" fill="#ffffff" textAnchor="middle" dominantBaseline="middle">
+                QR Code
+            </text>
+        </svg>
+    );
+};
+
+// --- MAIN APPLICATION COMPONENT ---
+
+const App = () => {
+    const userId = useAuthContext();
+
+    // Mock Tenant Data (Fetched from DB/API in real app)
+    const [tenantData, setTenantData] = useState({
+        unit: 'Apt 3B',
+        amountDue: 55000,
+        name: 'Aisha Mohammed',
+        status: 'PENDING', // MOCKED: PENDING, DUE, OVERDUE
+    });
+
+    // Payment States
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [invoiceData, setInvoiceData] = useState(null);
+    const [paymentStatus, setPaymentStatus] = useState('UNPAID'); // UNPAID, INVOICE_PENDING, PAID, ERROR
+    const [error, setError] = useState(null);
+
+    // Effect to poll for payment status once an invoice is generated
+    useEffect(() => {
+        if (invoiceData && paymentStatus === 'INVOICE_PENDING') {
+            const checkStatus = async () => {
+                try {
+                    const status = await pollPaymentStatus(invoiceData.invoice);
+                    if (status === 'SETTLED') {
+                        setPaymentStatus('PAID');
+                        // In a real app, trigger receipt generation/anchoring here
+                    }
+                } catch (err) {
+                    setError('Failed to confirm payment status.');
+                    console.error('Polling error:', err);
+                }
+            };
+            // Start polling (simplified to one successful check for this mock)
+            const timer = setTimeout(checkStatus, 5000); 
+            return () => clearTimeout(timer);
+        }
+    }, [invoiceData, paymentStatus]);
+
+    const handleGenerateInvoice = useCallback(async () => {
+        setError(null);
+        setInvoiceData(null);
+        setIsGenerating(true);
+        setPaymentStatus('UNPAID');
+
+        try {
+            const invoice = await generateLightningInvoice(tenantData.amountDue, tenantData.unit);
+            setInvoiceData(invoice);
+            setPaymentStatus('INVOICE_PENDING');
+        } catch (err) {
+            setError('Error generating invoice. Please check the amount.');
+            setPaymentStatus('ERROR');
+            console.error("Invoice Generation Failed:", err);
+        } finally {
+            setIsGenerating(false);
+        }
+    }, [tenantData.amountDue, tenantData.unit]);
+
+    // Determine the main button text and color based on payment state
+    const buttonProps = useMemo(() => {
+        if (paymentStatus === 'PAID') {
+            return { text: 'Payment Settled', icon: CheckCircle, color: 'bg-green-600 hover:bg-green-700' };
+        }
+        if (isGenerating) {
+            return { text: 'Generating Invoice...', icon: Loader2, color: 'bg-gray-500', disabled: true };
+        }
+        if (paymentStatus === 'INVOICE_PENDING') {
+            return { text: 'Waiting for Payment...', icon: Clock, color: 'bg-yellow-600', disabled: true };
+        }
+        return { text: 'Generate Lightning Invoice', icon: Zap, color: 'bg-indigo-600 hover:bg-indigo-700' };
+    }, [paymentStatus, isGenerating]);
+
+
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-inter">
+            <div className="max-w-xl mx-auto">
+                {/* Header */}
+                <header className="mb-8 pt-4">
+                    <h1 className="text-3xl font-extrabold text-gray-800 flex items-center">
+                        <CreditCard className="w-8 h-8 mr-3 text-indigo-600" />
+                        Rent Payment Portal
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">Tenant: {tenantData.name} | Unit: {tenantData.unit}</p>
+                    <div className="mt-4 p-2 bg-white rounded-lg shadow-sm text-xs text-gray-500 font-mono overflow-auto">
+                        **User ID:** {userId || 'Loading...'}
+                    </div>
+                </header>
+
+                {/* Amount Due Card */}
+                <div className="bg-white p-6 rounded-xl shadow-2xl mb-8 border-t-4 border-indigo-500">
+                    <div className="flex justify-between items-center mb-4 border-b pb-3">
+                        <span className="text-lg font-semibold text-gray-600">Total Amount Due</span>
+                        <span className="text-sm px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium">
+                            {tenantData.status}
+                        </span>
+                    </div>
+                    <div className="text-5xl font-extrabold text-gray-900 flex items-end">
+                        <span className="text-3xl mr-2 text-indigo-500">KES</span>
+                        {tenantData.amountDue.toLocaleString('en-KE')}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                        For rent and associated fees for the current period.
+                    </p>
+                </div>
+
+                {/* Action Area */}
+                <div className="bg-white p-6 rounded-xl shadow-2xl">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <Zap className="w-5 h-5 mr-2 text-yellow-500" />
+                        Pay with Bitcoin Lightning
+                    </h2>
+
+                    {error && (
+                        <div className="p-3 bg-red-100 text-red-700 rounded-lg flex items-center mb-4">
+                            <AlertTriangle className="w-5 h-5 mr-2" />
+                            <span className="text-sm font-medium">{error}</span>
+                        </div>
+                    )}
+
+                    {/* Main Action Button */}
+                    <button
+                        onClick={handleGenerateInvoice}
+                        className={`w-full flex justify-center items-center space-x-2 px-6 py-3 font-bold text-white rounded-xl shadow-lg transition transform ${buttonProps.color} disabled:opacity-50`}
+                        disabled={buttonProps.disabled || paymentStatus === 'PAID' || isGenerating}
+                    >
+                        {isGenerating || paymentStatus === 'INVOICE_PENDING' ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                            <buttonProps.icon className="w-5 h-5" />
+                        )}
+                        <span>{buttonProps.text}</span>
+                    </button>
+
+                    {/* Invoice Display */}
+                    {invoiceData && (
+                        <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-3">Lightning Invoice Details:</h3>
+
+                            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+
+                                {/* QR Code Area */}
+                                <div className="p-3 bg-white rounded-xl shadow-md">
+                                    <QRCode value={invoiceData.invoice} size={150} />
+                                </div>
+
+                                {/* Invoice Text Details */}
+                                <div className="text-sm text-gray-600 w-full sm:w-1/2">
+                                    <p className="flex justify-between items-center mb-2">
+                                        <span className="font-medium">Amount (Sats):</span>
+                                        <span className="font-extrabold text-lg text-yellow-600">{invoiceData.amount_sats.toLocaleString()} SATs</span>
+                                    </p>
+                                    <p className="flex justify-between items-start mb-2">
+                                        <span className="font-medium">Memo:</span>
+                                        <span className="text-right max-w-[65%]">{invoiceData.memo}</span>
+                                    </p>
+                                    <p className="break-all font-mono text-xs p-2 bg-gray-100 rounded-lg border border-gray-200">
+                                        <span className="font-medium text-gray-500 block mb-1">Bolt11 Invoice:</span>
+                                        {invoiceData.invoice}
+                                    </p>
+                                    <button 
+                                        onClick={() => {
+                                            // Mock clipboard copy (document.execCommand('copy') is required for sandbox compatibility)
+                                            const el = document.createElement('textarea');
+                                            el.value = invoiceData.invoice;
+                                            document.body.appendChild(el);
+                                            el.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(el);
+                                            // NOTE: Use a custom modal in production!
+                                            console.log('Invoice copied to clipboard!'); 
+                                        }}
+                                        className="mt-3 w-full text-center text-xs text-indigo-600 hover:underline"
+                                    >
+                                        Click to Copy Invoice
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    )}
+
+                    {paymentStatus === 'PAID' && (
+                        <div className="mt-6 p-4 text-center bg-green-100 rounded-xl border-2 border-green-500 shadow-md">
+                            <CheckCircle className="w-8 h-8 mx-auto text-green-600" />
+                            <p className="text-xl font-bold text-green-800 mt-2">Payment Confirmed!</p>
+                            <p className="text-sm text-green-700">Your rent has been successfully paid and recorded.</p>
+                            <button className="mt-3 text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                                View Official Receipt
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <footer className="mt-8 text-center text-xs text-gray-500">
+                    <p>Payments powered by Lightning Network (LND) and secured by Mwangaza Rent Ledger.</p>
+                </footer>
+            </div>
+        </div>
+    );
+};
+
+export default App;
+
+                            
